@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Respuestas</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 1rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 2rem;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 0.5rem;
+      text-align: center;
+    }
+    canvas {
+      max-width: 100%;
+      height: auto;
+    }
+    select {
+      margin: 1rem 0;
+      padding: 0.5rem;
+    }
+    @media (max-width: 600px) {
+      table, thead, tbody, th, td, tr {
+        font-size: 0.85rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Respuestas Recibidas</h1>
+
+ 
+
+  <h2>Estadísticas</h2>
+  <ul>
+    <li><strong>App más votada:</strong> {{ app_mas_votada }}</li>
+    <li><strong>Promedio de valoraciones:</strong> {{ promedio_valoracion }}</li>
+  </ul>
+
+  <h3>Ranking de Apps</h3>
+  <ol>
+    {% for app, cantidad in ranking_apps.items() %}
+    <li>{{ app }} - {{ cantidad }} voto{{ 's' if cantidad > 1 else '' }}</li>
+    {% endfor %}
+  </ol>
+
+  <h3>Gráfico de votos por App</h3>
+
+  <label for="orden">Ordenar gráfico:</label>
+  <select id="orden">
+    <option value="asc">Menor a mayor</option>
+    <option value="desc" selected>Mayor a menor</option>
+  </select>
+
+  <canvas id="graficoApps"></canvas>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script>
+    const rawLabels = {{ ranking_apps.keys() | list | tojson }};
+    const rawData = {{ ranking_apps.values() | list | tojson }};
+
+    let chart; // Referencia global para poder actualizarlo
+
+    const renderChart = (labels, data) => {
+      const ctx = document.getElementById('graficoApps').getContext('2d');
+
+      if (chart) chart.destroy(); // Limpia gráfico anterior
+
+      chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Cantidad de votos por App',
+            data: data,
+            backgroundColor: 'rgba(54, 162, 235, 0.5)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                stepSize: 1
+              }
+            }
+          }
+        }
+      });
+    };
+
+    // Función para ordenar datos y re-renderizar
+    const actualizarGrafico = (orden) => {
+      const pares = rawLabels.map((label, i) => ({ label, value: rawData[i] }));
+
+      pares.sort((a, b) => orden === 'asc' ? a.value - b.value : b.value - a.value);
+
+      const labelsOrdenados = pares.map(p => p.label);
+      const dataOrdenada = pares.map(p => p.value);
+
+      renderChart(labelsOrdenados, dataOrdenada);
+    };
+
+    // Inicial
+    actualizarGrafico('desc');
+
+    document.getElementById('orden').addEventListener('change', (e) => {
+      actualizarGrafico(e.target.value);
+    });
+  </script>
+
+   <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>App Frecuente</th>
+        <th>Valoración</th>
+        <th>Tipo de Contenido</th>
+        <th>Frecuencia</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in respuestas %}
+      <tr>
+        <td>{{ r.id }}</td>
+        <td>{{ r.app_frecuente }}</td>
+        <td>{{ r.valoracion }}</td>
+        <td>{{ r.tipo_contenido }}</td>
+        <td>{{ r.frecuencia }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+
+  <p>BORRAR BASE DE DATOS </p>
+<P> ACCIÓN IRREVERSIBLE, REQUIERE CLAVE DE ADMINISTRADOR</P>
+  <form action="/borrar-datos" method="POST" onsubmit="return confirm('¿Seguro que querés borrar todo?');">
+  <input type="password" name="clave" placeholder="Clave de administrador" required>
+  <button type="submit">🗑️ Borrar datos</button>
+</form>
+
+
+
+</body>
+</html>
